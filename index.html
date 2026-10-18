@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Controlled Web App</title>
+    <!-- Tailwind CSS ლამაზი დიზაინისთვის -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe ბიბლიოთეკები ხელის თრექინგისთვის -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <!-- Google Sign-In API -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        /* მცურავი კამერის ფანჯარა კუთხეში */
+        #webcam-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 220px;
+            height: 160px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 3px solid #06b6d4;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 10000;
+            background: #111;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* სარკისებური ეფექტი */
+        }
+        /* ვირტუალური კურსორი, რომელიც თითს მოჰყვება */
+        #virtual-cursor {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            background: rgba(6, 182, 212, 0.7);
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 99999;
+            transition: background 0.2s, transform 0.2s;
+        }
+        #virtual-cursor.clicking {
+            background: rgba(16, 185, 129, 0.9);
+            transform: translate(-50%, -50%) scale(0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
+
+    <!-- ვირტუალური კურსორი ეკრანზე -->
+    <div id="virtual-cursor"></div>
+
+    <!-- მთავარი კონტეინერი -->
+    <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
+        <h1 class="text-3xl font-bold mb-4 text-cyan-400">ხელით სამართავი ვებ-სივრცე</h1>
+        <p class="text-slate-300 mb-6">მართეთ საიტი ჰაერში ხელის და თითების მოძრაობით. საჩვენებელი თითი აკონტროლებს კურსორს, ხოლო ცერისა და თითის შეხებით (Pinch) ხდება კლიკი!</p>
+
+        <!-- Google / YouTube Login ღილაკი -->
+        <div id="auth-section" class="mb-6 flex justify-center">
+            <div id="g_id_onload"
+                 data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse">
+            </div>
+            <div class="g_id_signin" data-type="standard"></div>
+        </div>
+        <div id="user-info" class="text-emerald-400 font-semibold mb-6 hidden">ავტორიზაცია წარმატებულია! 🎉</div>
+
+        <!-- ინტერაქტიული ღილაკები ტესტირებისთვის -->
+        <div class="grid grid-cols-2 gap-4">
+            <button onclick="alert('პირველი ღილაკი დაკლიკდა!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 1</button>
+            <button onclick="alert('მეორე ღილაკი დაკლიკდა!')" class="bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 2</button>
+        </div>
+    </div>
+
+    <!-- კუთხეში მიმაგრებული კამერა -->
+    <div id="webcam-container">
+        <video id="input_video" autoplay playsinline></video>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('input_video');
+        const cursor = document.getElementById('virtual-cursor');
+
+        let lastClickTime = 0;
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // საჩვენებელი თითის წვერი (Index finger tip - ID 8)
+                const indexTip = landmarks[8];
+                // ცერის წვერი (Thumb tip - ID 4)
+                const thumbTip = landmarks[4];
+
+                // კოორდინატების გადაყვანა ეკრანის ზომაზე (სარკისებრი გათვალისწინებით)
+                const x = window.innerWidth - (indexTip.x * window.innerWidth);
+                const y = indexTip.y * window.innerHeight;
+
+                // კურსორის გადაადგილება
+                cursor.style.left = `${x}px`;
+                cursor.style.top = `${y}px`;
+
+                // მანძილი ცერსა და საჩვენებელ თითს შორის (კლიკის ჟესტისთვის - Pinch)
+                const distance = Math.hypot(
+                    indexTip.x - thumbTip.x,
+                    indexTip.y - thumbTip.y
+                );
+
+                const now = Date.now();
+                if (distance < 0.05 && (now - lastClickTime > 500)) {
+                    cursor.classList.add('clicking');
+                    lastClickTime = now;
+
+                    // ვპოულობთ ელემენტს რომელზეც თითია და ვაკეთებთ κლიკს
+                    const element = document.elementFromPoint(x, y);
+                    if (element && typeof element.click === 'function') {
+                        element.click();
+                    }
+
+                    setTimeout(() => {
+                        cursor.classList.remove('clicking');
+                    }, 200);
+                }
+            }
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        // Google Login-ის ქოლბექი
+        function handleCredentialResponse(response) {
+            console.encode?.(response.credential);
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('user-info').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
