@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gesture Controlled Web App with YouTube & Scroll</title>
+    <title>Gesture Controlled YouTube App</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- MediaPipe Hands -->
@@ -11,13 +11,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     
     <style>
+        /* კამერა მარცხენა ზედა კუთხეში */
         #webcam-container {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 220px;
-            height: 160px;
-            border-radius: 16px;
+            top: 20px;
+            left: 20px;
+            width: 160px;
+            height: 120px;
+            border-radius: 12px;
             overflow: hidden;
             border: 3px solid #06b6d4;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
@@ -46,38 +47,31 @@
             background: rgba(16, 185, 129, 0.9);
             transform: translate(-50%, -50%) scale(0.8);
         }
-        #virtual-cursor.scrolling {
-            background: rgba(234, 179, 8, 0.9); /* ყვითელი ფერი სქროლვისას */
-            transform: translate(-50%, -50%) scale(1.2);
-        }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center p-6 pb-32">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
 
     <!-- ვირტუალური კურსორი -->
     <div id="virtual-cursor"></div>
 
-    <!-- მთავარი კონტეინერი -->
-    <div class="max-w-3xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center mt-10">
-        <h1 class="text-3xl font-bold mb-4 text-cyan-400">ჟესტებით სამართავი YouTube და სქროლვა</h1>
-        <p class="text-slate-300 mb-6">მართეთ კურსორი თითით. ცერისა და თითის შეხებით (Pinch) გააკეთეთ კლიკი. ხოლო თითის წრიული მოძრაობით (მარჯვნივ/მარცხნივ) ასქროლეთ გვერდი ზევით-ქვემოთ!</p>
+    <!-- მთავარი კონტეინერი YouTube-ით -->
+    <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
+        <h1 class="text-3xl font-bold mb-2 text-cyan-400">YouTube ჟესტებით მართვა</h1>
+        <p class="text-slate-300 mb-6">მართე კურსორი თითით და გააკეთე კლიკი (Pinch) ვიდეოს საართავად!</p>
 
-        <!-- YouTube ვიდეოს ჩაშენებული ფანჯარა (საიტის შიგნით) -->
-        <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-3 text-emerald-400">YouTube ვიდეო ფლეიერი</h2>
-            <div class="relative w-full overflow-hidden rounded-xl shadow-lg border border-slate-600" style="padding-top: 56.25%;">
-                <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/jfKfPfyJRdk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
+        <!-- YouTube ვიდეო საიტის შიგნით -->
+        <div class="mb-6 relative w-full overflow-hidden rounded-xl shadow-lg border border-slate-600" style="padding-top: 56.25%;">
+            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
 
         <!-- ტესტური ღილაკები -->
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="alert('პირველი ღილაკი დაკლიკდა წარმატებით!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 1</button>
-            <button onclick="window.open('https://www.youtube.com', '_blank')" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition">YouTube-ზე გადასვლა</button>
+            <button onclick="alert('ვიდეო ჩართულია!')" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition">იუთუბის ტესტ ღილაკი</button>
+            <button onclick="alert('სისტემა მუშაობს წარმატებით!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">სისტემის ღილაკი</button>
         </div>
     </div>
 
-    <!-- კამერა კუთხეში -->
+    <!-- კამერა მარცხენა ზედა კუთხეში -->
     <div id="webcam-container">
         <video id="input_video" autoplay playsinline></video>
     </div>
@@ -87,8 +81,6 @@
         const cursor = document.getElementById('virtual-cursor');
 
         let lastClickTime = 0;
-        let prevX = 0;
-        let scrollAccumulator = 0;
 
         function onResults(results) {
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
@@ -103,19 +95,7 @@
                 cursor.style.left = `${x}px`;
                 cursor.style.top = `${y}px`;
 
-                // 1. სქროლვის ლოგიკა (თითის ჰორიზონტალური წრიული/გვერდითი მოძრაობა)
-                const deltaX = x - prevX;
-                if (Math.abs(deltaX) > 15) { // თუ თითი სწრაფად მოძრაობს მარჯვნივ ან მარცხნივ
-                    window.scrollBy({
-                        top: deltaX * 3, // სქროლვის სიჩქარე
-                        behavior: 'smooth'
-                    });
-                    cursor.classList.add('scrolling');
-                    setTimeout(() => cursor.classList.remove('scrolling'), 200);
-                }
-                prevX = x;
-
-                // 2. კლიკის ლოგიკა (Pinch)
+                // კლიკის ლოგიკა (Pinch)
                 const distance = Math.hypot(
                     indexTip.x - thumbTip.x,
                     indexTip.y - thumbTip.y
