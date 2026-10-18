@@ -3,17 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gesture Controlled Web App</title>
-    <!-- Tailwind CSS ლამაზი დიზაინისთვის -->
+    <title>Gesture Controlled Web App with YouTube & Scroll</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MediaPipe ბიბლიოთეკები ხელის თრექინგისთვის -->
+    <!-- MediaPipe Hands -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <!-- Google Sign-In API -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <style>
-        /* მცურავი კამერის ფანჯარა კუთხეში */
         #webcam-container {
             position: fixed;
             bottom: 20px;
@@ -31,9 +28,8 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* სარკისებური ეფექტი */
+            transform: scaleX(-1);
         }
-        /* ვირტუალური კურსორი, რომელიც თითს მოჰყვება */
         #virtual-cursor {
             position: fixed;
             width: 30px;
@@ -44,42 +40,44 @@
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 99999;
-            transition: background 0.2s, transform 0.2s;
+            transition: background 0.1s, transform 0.1s;
         }
         #virtual-cursor.clicking {
             background: rgba(16, 185, 129, 0.9);
             transform: translate(-50%, -50%) scale(0.8);
         }
+        #virtual-cursor.scrolling {
+            background: rgba(234, 179, 8, 0.9); /* ყვითელი ფერი სქროლვისას */
+            transform: translate(-50%, -50%) scale(1.2);
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center p-6 pb-32">
 
-    <!-- ვირტუალური კურსორი ეკრანზე -->
+    <!-- ვირტუალური კურსორი -->
     <div id="virtual-cursor"></div>
 
     <!-- მთავარი კონტეინერი -->
-    <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-        <h1 class="text-3xl font-bold mb-4 text-cyan-400">ხელით სამართავი ვებ-სივრცე</h1>
-        <p class="text-slate-300 mb-6">მართეთ საიტი ჰაერში ხელის და თითების მოძრაობით. საჩვენებელი თითი აკონტროლებს კურსორს, ხოლო ცერისა და თითის შეხებით (Pinch) ხდება კლიკი!</p>
+    <div class="max-w-3xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center mt-10">
+        <h1 class="text-3xl font-bold mb-4 text-cyan-400">ჟესტებით სამართავი YouTube და სქროლვა</h1>
+        <p class="text-slate-300 mb-6">მართეთ კურსორი თითით. ცერისა და თითის შეხებით (Pinch) გააკეთეთ კლიკი. ხოლო თითის წრიული მოძრაობით (მარჯვნივ/მარცხნივ) ასქროლეთ გვერდი ზევით-ქვემოთ!</p>
 
-        <!-- Google / YouTube Login ღილაკი -->
-        <div id="auth-section" class="mb-6 flex justify-center">
-            <div id="g_id_onload"
-                 data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse">
+        <!-- YouTube ვიდეოს ჩაშენებული ფანჯარა (საიტის შიგნით) -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-3 text-emerald-400">YouTube ვიდეო ფლეიერი</h2>
+            <div class="relative w-full overflow-hidden rounded-xl shadow-lg border border-slate-600" style="padding-top: 56.25%;">
+                <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/jfKfPfyJRdk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
-            <div class="g_id_signin" data-type="standard"></div>
         </div>
-        <div id="user-info" class="text-emerald-400 font-semibold mb-6 hidden">ავტორიზაცია წარმატებულია! 🎉</div>
 
-        <!-- ინტერაქტიული ღილაკები ტესტირებისთვის -->
+        <!-- ტესტური ღილაკები -->
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="alert('პირველი ღილაკი დაკლიკდა!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 1</button>
-            <button onclick="alert('მეორე ღილაკი დაკლიკდა!')" class="bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 2</button>
+            <button onclick="alert('პირველი ღილაკი დაკლიკდა წარმატებით!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">ტესტ ღილაკი 1</button>
+            <button onclick="window.open('https://www.youtube.com', '_blank')" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition">YouTube-ზე გადასვლა</button>
         </div>
     </div>
 
-    <!-- კუთხეში მიმაგრებული კამერა -->
+    <!-- კამერა კუთხეში -->
     <div id="webcam-container">
         <video id="input_video" autoplay playsinline></video>
     </div>
@@ -89,36 +87,45 @@
         const cursor = document.getElementById('virtual-cursor');
 
         let lastClickTime = 0;
+        let prevX = 0;
+        let scrollAccumulator = 0;
 
         function onResults(results) {
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 
-                // საჩვენებელი თითის წვერი (Index finger tip - ID 8)
-                const indexTip = landmarks[8];
-                // ცერის წვერი (Thumb tip - ID 4)
-                const thumbTip = landmarks[4];
+                const indexTip = landmarks[8]; // საჩვენებელი თითი
+                const thumbTip = landmarks[4]; // ცერი
 
-                // კოორდინატების გადაყვანა ეკრანის ზომაზე (სარკისებრი გათვალისწინებით)
                 const x = window.innerWidth - (indexTip.x * window.innerWidth);
                 const y = indexTip.y * window.innerHeight;
 
-                // კურსორის გადაადგილება
                 cursor.style.left = `${x}px`;
                 cursor.style.top = `${y}px`;
 
-                // მანძილი ცერსა და საჩვენებელ თითს შორის (კლიკის ჟესტისთვის - Pinch)
+                // 1. სქროლვის ლოგიკა (თითის ჰორიზონტალური წრიული/გვერდითი მოძრაობა)
+                const deltaX = x - prevX;
+                if (Math.abs(deltaX) > 15) { // თუ თითი სწრაფად მოძრაობს მარჯვნივ ან მარცხნივ
+                    window.scrollBy({
+                        top: deltaX * 3, // სქროლვის სიჩქარე
+                        behavior: 'smooth'
+                    });
+                    cursor.classList.add('scrolling');
+                    setTimeout(() => cursor.classList.remove('scrolling'), 200);
+                }
+                prevX = x;
+
+                // 2. კლიკის ლოგიკა (Pinch)
                 const distance = Math.hypot(
                     indexTip.x - thumbTip.x,
                     indexTip.y - thumbTip.y
                 );
 
                 const now = Date.now();
-                if (distance < 0.05 && (now - lastClickTime > 500)) {
+                if (distance < 0.05 && (now - lastClickTime > 600)) {
                     cursor.classList.add('clicking');
                     lastClickTime = now;
 
-                    // ვპოულობთ ელემენტს რომელზეც თითია და ვაკეთებთ κლიკს
                     const element = document.elementFromPoint(x, y);
                     if (element && typeof element.click === 'function') {
                         element.click();
@@ -152,13 +159,6 @@
             height: 480
         });
         camera.start();
-
-        // Google Login-ის ქოლბექი
-        function handleCredentialResponse(response) {
-            console.encode?.(response.credential);
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('user-info').classList.remove('hidden');
-        }
     </script>
 </body>
 </html>
