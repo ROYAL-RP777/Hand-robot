@@ -56,18 +56,18 @@
 
     <!-- მთავარი კონტეინერი YouTube-ით -->
     <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-        <h1 class="text-3xl font-bold mb-2 text-cyan-400">YouTube ჟესტებით მართვა</h1>
-        <p class="text-slate-300 mb-6">მართე კურსორი თითით და გააკეთე კლიკი (Pinch) ვიდეოს საართავად!</p>
+        <h1 class="text-3xl font-bold mb-2 text-cyan-400">იუთუბის ვიდეოს მართვა ჟესტებით</h1>
+        <p class="text-slate-300 mb-6">მიიტანე კურსორი ღილაკებზე და გააკეთე Pinch (ცერის და საჩვენებლის შეხება) ვიდეოს სამართავად!</p>
 
-        <!-- YouTube ვიდეო საიტის შიგნით -->
+        <!-- YouTube ვიდეო საიტის შიგნით (Iframe API-ით) -->
         <div class="mb-6 relative w-full overflow-hidden rounded-xl shadow-lg border border-slate-600" style="padding-top: 56.25%;">
-            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <iframe id="yt-player" class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
 
-        <!-- ტესტური ღილაკები -->
+        <!-- YouTube მართვის რეალური ღილაკები -->
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="alert('ვიდეო ჩართულია!')" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition">იუთუბის ტესტ ღილაკი</button>
-            <button onclick="alert('სისტემა მუშაობს წარმატებით!')" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition">სისტემის ღილაკი</button>
+            <button id="play-btn" onclick="controlVideo('play')" class="bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold transition">▶ დაკვრა (Play)</button>
+            <button id="pause-btn" onclick="controlVideo('pause')" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition">⏸ შეჩერება (Pause)</button>
         </div>
     </div>
 
@@ -76,7 +76,25 @@
         <video id="input_video" autoplay playsinline></video>
     </div>
 
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
     <script>
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-player');
+        }
+
+        function controlVideo(action) {
+            if (player) {
+                if (action === 'play') {
+                    player.playVideo();
+                } else if (action === 'pause') {
+                    player.pauseVideo();
+                }
+            }
+        }
+
         const videoElement = document.getElementById('input_video');
         const cursor = document.getElementById('virtual-cursor');
 
@@ -89,10 +107,11 @@
                 const indexTip = landmarks[8]; // საჩვენებელი თითი
                 const thumbTip = landmarks[4]; // ცერი
 
-                const x = window.innerWidth - (indexTip.x * window.innerWidth);
+                const x = window.innerWidth - (indexTest = indexTip.x * window.innerWidth); // სარკე
+                const realX = window.innerWidth - (indexTip.x * window.innerWidth);
                 const y = indexTip.y * window.innerHeight;
 
-                cursor.style.left = `${x}px`;
+                cursor.style.left = `${realX}px`;
                 cursor.style.top = `${y}px`;
 
                 // კლიკის ლოგიკა (Pinch)
@@ -106,7 +125,7 @@
                     cursor.classList.add('clicking');
                     lastClickTime = now;
 
-                    const element = document.elementFromPoint(x, y);
+                    const element = document.elementFromPoint(realX, y);
                     if (element && typeof element.click === 'function') {
                         element.click();
                     }
